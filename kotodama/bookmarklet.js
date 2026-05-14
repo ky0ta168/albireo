@@ -157,14 +157,36 @@
   }
 
   // ---- ダウンロード ----
-  dlBtn.onclick = function () {
+  // iOS Safari は <a download> で blob を保存できないため、
+  // Web Share API が使える環境では共有シート経由で「ファイル」に保存させる
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  dlBtn.onclick = async function () {
     if (!result) return;
     const json = JSON.stringify(result, null, 2);
+    const filename = videoId + '_albireo.json';
+
+    if (isIOS && typeof navigator.canShare === 'function') {
+      try {
+        const file = new File([json], filename, { type: 'application/json' });
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: filename });
+          setStatus('共有しました', COLOR_SUCCESS);
+          return;
+        }
+      } catch (e) {
+        if (e.name === 'AbortError') return;
+        setStatus('共有失敗: ' + e.message, COLOR_ERROR);
+        return;
+      }
+    }
+
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = videoId + '_albireo.json';
+    a.download = filename;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
