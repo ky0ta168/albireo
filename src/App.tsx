@@ -40,8 +40,8 @@ const navItemSx = {
 };
 
 export default function App() {
-  const [videoDataList, setVideoDataList] = useState<VideoData[]>(
-    () => getVideoDataList(),
+  const [videoDataList, setVideoDataList] = useState<VideoData[]>(() =>
+    getVideoDataList(),
   );
   const [openPlayer, setOpenPlayer] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
@@ -159,7 +159,7 @@ export default function App() {
         position="fixed"
         sx={{
           color: "#e8e8f0",
-          background: "rgba(15, 15, 23, 0.75)",
+          background: "rgba(15, 15, 23, 0.9)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
           borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
@@ -219,6 +219,13 @@ export default function App() {
                   boxShadow: "0 2px 10px rgba(0, 0, 0, 0.35)",
                   cursor: "pointer",
                   WebkitTapHighlightColor: "transparent",
+                  transition:
+                    "background 0.15s, transform 0.1s, border-color 0.15s",
+                  "&:active": {
+                    background: "#23233a",
+                    borderColor: "rgba(255, 255, 255, 0.18)",
+                    transform: "scale(0.985)",
+                  },
                 }}
               >
                 <Box
@@ -256,7 +263,7 @@ export default function App() {
                     minWidth: 0,
                     display: "flex",
                     alignItems: "flex-start",
-                    gap: 0.5,
+                    gap: 0,
                   }}
                 >
                   <Box
@@ -301,14 +308,18 @@ export default function App() {
                     }}
                     sx={{
                       flexShrink: 0,
-                      width: 36,
-                      height: 36,
+                      width: 32,
+                      height: 32,
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       cursor: "pointer",
                       WebkitTapHighlightColor: "transparent",
+                      transition: "background 0.15s",
+                      "&:active": {
+                        background: "rgba(255, 255, 255, 0.12)",
+                      },
                     }}
                   >
                     <MoreVertIcon
@@ -352,7 +363,7 @@ export default function App() {
           paddingX: 1.5,
           paddingTop: 0.5,
           paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 4px)",
-          background: "rgba(15, 15, 23, 0.65)",
+          background: "rgba(15, 15, 23, 0.7)",
           backdropFilter: "blur(20px) saturate(180%)",
           WebkitBackdropFilter: "blur(20px) saturate(180%)",
           borderTop: "1px solid rgba(255, 255, 255, 0.08)",
@@ -361,6 +372,19 @@ export default function App() {
         }}
       >
         <Stack direction="row" spacing={0} sx={{ width: "100%" }}>
+          <Box component="button" onClick={() => handleExport()} sx={navItemSx}>
+            <FileUploadRoundedIcon sx={{ fontSize: 22 }} />
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: "0.7rem",
+                lineHeight: 1,
+                marginTop: 0.25,
+              }}
+            >
+              Export
+            </Typography>
+          </Box>
           <Box
             component="button"
             onClick={() => handleOpenSaveForm()}
@@ -376,19 +400,6 @@ export default function App() {
               }}
             >
               Save
-            </Typography>
-          </Box>
-          <Box component="button" onClick={() => handleExport()} sx={navItemSx}>
-            <FileUploadRoundedIcon sx={{ fontSize: 22 }} />
-            <Typography
-              variant="caption"
-              sx={{
-                fontSize: "0.7rem",
-                lineHeight: 1,
-                marginTop: 0.25,
-              }}
-            >
-              Export
             </Typography>
           </Box>
           <Box component="button" onClick={handleButtonClick} sx={navItemSx}>
