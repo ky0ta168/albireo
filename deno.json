@@ -1,0 +1,10 @@
+{
+  "tasks": {
+    "dev": "deno run -A npm:vite",
+    "build": "deno task typecheck && deno run -A npm:vite build",
+    "typecheck": "deno run -A npm:typescript/tsc --noEmit",
+    "preview": "deno run -A npm:vite preview",
+    "deploy": "rm -rf docs && deno task build && git add . && git commit && git push origin main"
+  },
+  "nodeModulesDir": "auto"
+}

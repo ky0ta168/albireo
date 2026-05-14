@@ -1,0 +1,23 @@
+{
+  "name": "albireo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "homepage": "https://ky0ta168.github.io/albireo/",
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@mui/icons-material": "^9.0.0",
+    "@mui/material": "^9.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-player": "^3.4.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "typescript": "^6.0.0",
+    "vite": "^8.0.0"
+  }
+}
