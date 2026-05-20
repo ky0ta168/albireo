@@ -44,10 +44,13 @@ export default function Player({ open, onClose, video }: PlayerProps) {
 
     if (Array.isArray(video.subtitles)) {
       const currentMs = playedSeconds * 1000;
-      const current = video.subtitles.find(
-        (s: KotodamaSubtitle) =>
-          currentMs >= s.startMs && currentMs < s.startMs + s.durationMs,
-      );
+      // YouTube auto-CCは範囲が重なるイベントを複数含むため、最後に開始した(=最新の)ものを採用する。
+      // 配列は startMs 昇順で生成されている前提。find だと最古の一致を返してしまい字幕が遅れて見える。
+      let current: KotodamaSubtitle | null = null;
+      for (const s of video.subtitles) {
+        if (s.startMs > currentMs) break;
+        if (currentMs < s.startMs + s.durationMs) current = s;
+      }
       if (current) {
         setSubtitle(current.subtitle);
         setTranslation(current.translation);
