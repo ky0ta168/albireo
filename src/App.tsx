@@ -564,7 +564,10 @@ export default function App() {
         open={handoffNotice !== null}
         autoHideDuration={4000}
         onClose={() => setHandoffNotice(null)}
-        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        sx={{
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 64px) !important",
+        }}
       >
         <SnackbarContent
           message={handoffNotice}
@@ -575,7 +578,6 @@ export default function App() {
             border: "1px solid rgba(255, 255, 255, 0.14)",
             color: "#e8e8f0",
             borderRadius: "12px",
-            marginTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
           }}
         />
       </Snackbar>
