@@ -19,9 +19,9 @@ YouTubeプレイヤーが内部的に取得する `timedtext` 字幕データを
 3. 動画の字幕ボタンを **OFF→ON** に切り替える
     - YouTubeが `timedtext` を取得するタイミングを捕捉するため
     - 既にONなら一度OFFにしてからONにし直す
-4. パネルが「取得完了: N 件」と表示されたら「Albireo用JSONをダウンロード」を押下
-5. `{videoId}_albireo.json` がダウンロードされる
-6. Albireoで「Save」→ファイル選択でこのJSONを読み込ませる
+4. パネルが「取得完了: N 件」と表示されたら、以下のいずれかを選ぶ:
+    - **「Albireoに保存」(推奨)** — Albireo を新規タブで開き、postMessage で字幕データを直接受け渡しして即保存。ファイル操作不要。
+    - 「JSONをダウンロード」 — フォールバック。`{videoId}_albireo.json` を保存し、Albireo の「Save」からインポート。
 
 ## 出力フォーマット
 

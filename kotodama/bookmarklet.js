@@ -12,6 +12,10 @@
   // 動画タイトル（末尾の " - YouTube" を除去）
   const videoTitle = document.title.replace(/\s*-\s*YouTube\s*$/, '').trim();
 
+  const ALBIREO_ORIGIN = 'https://ky0ta168.github.io';
+  const ALBIREO_URL = ALBIREO_ORIGIN + '/albireo/?handoff=1';
+  const HANDOFF_TIMEOUT_MS = 15000;
+
   const FONT = '-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif';
   const COLOR_DEFAULT = 'rgba(255,255,255,0.55)';
   const COLOR_ERROR = '#ff7a85';
@@ -51,17 +55,27 @@
   status.style.cssText = 'margin-bottom:8px;color:' + COLOR_DEFAULT + ';font-size:12px;line-height:1.4';
   status.textContent = '字幕をOFF→ONに切り替えてください';
 
-  // ダウンロードボタン
+  // Albireoに保存ボタン（プライマリ）
+  const saveBtn = document.createElement('button');
+  saveBtn.textContent = 'Albireoに保存';
+  saveBtn.style.cssText = 'visibility:hidden;width:100%;padding:8px;background:linear-gradient(135deg,rgba(124,58,237,0.95),rgba(236,72,153,0.95));color:#fff;border:none;border-radius:8px;cursor:pointer;font:600 13px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
+  saveBtn.onmouseover = () => saveBtn.style.filter = 'brightness(1.1)';
+  saveBtn.onmouseout = () => saveBtn.style.filter = 'brightness(1)';
+  saveBtn.onmousedown = () => saveBtn.style.transform = 'scale(0.97)';
+  saveBtn.onmouseup = () => saveBtn.style.transform = 'scale(1)';
+
+  // JSONダウンロードボタン（フォールバック・セカンダリ）
   const dlBtn = document.createElement('button');
-  dlBtn.textContent = 'Albireo用JSONをダウンロード';
-  dlBtn.style.cssText = 'visibility:hidden;width:100%;padding:8px;background:linear-gradient(135deg,rgba(124,58,237,0.95),rgba(236,72,153,0.95));color:#fff;border:none;border-radius:8px;cursor:pointer;font:600 13px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
-  dlBtn.onmouseover = () => dlBtn.style.filter = 'brightness(1.1)';
+  dlBtn.textContent = 'JSONをダウンロード';
+  dlBtn.style.cssText = 'visibility:hidden;width:100%;margin-top:6px;padding:7px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.18);border-radius:8px;cursor:pointer;font:500 12px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
+  dlBtn.onmouseover = () => dlBtn.style.filter = 'brightness(1.2)';
   dlBtn.onmouseout = () => dlBtn.style.filter = 'brightness(1)';
   dlBtn.onmousedown = () => dlBtn.style.transform = 'scale(0.97)';
   dlBtn.onmouseup = () => dlBtn.style.transform = 'scale(1)';
 
   panel.appendChild(header);
   panel.appendChild(status);
+  panel.appendChild(saveBtn);
   panel.appendChild(dlBtn);
   document.body.appendChild(panel);
 
@@ -73,7 +87,6 @@
   }
 
   // ---- XHR インターセプト ----
-  // YouTubeプレイヤーが送る timedtext リクエストの URL（tlangなし=元言語）をキャプチャ
   const origOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (method, url) {
     if (typeof url === 'string' && url.includes('/timedtext?')) {
@@ -87,7 +100,6 @@
 
   let fetching = false;
 
-  // json3 レスポンスを { startMs, durationMs, text }[] に正規化
   function parseEvents(text) {
     const events = JSON.parse(text).events || [];
     return events
@@ -133,7 +145,6 @@
         return;
       }
 
-      // startMs でマージ
       const transMap = new Map(trans.map(t => [t.startMs, t.text]));
       const subtitles = origs.map(o => ({
         startMs: o.startMs,
@@ -149,6 +160,7 @@
       };
 
       setStatus('取得完了: ' + subtitles.length + ' 件', COLOR_SUCCESS);
+      saveBtn.style.visibility = 'visible';
       dlBtn.style.visibility = 'visible';
     } catch (e) {
       setStatus('エラー: ' + e.message, COLOR_ERROR);
@@ -156,9 +168,55 @@
     }
   }
 
-  // ---- ダウンロード ----
-  // iOS Safari は <a download> で blob を保存できないため、
-  // Web Share API が使える環境では共有シート経由で「ファイル」に保存させる
+  // ---- Albireoに保存 (postMessage handoff) ----
+  // クリックハンドラ直下で同期的に window.open を呼ぶことでポップアップブロッカ回避。
+  saveBtn.onclick = function () {
+    if (!result) return;
+
+    const popup = window.open(ALBIREO_URL, '_blank');
+    if (!popup) {
+      setStatus('ポップアップを許可してください', COLOR_ERROR);
+      return;
+    }
+
+    setStatus('Albireoの準備を待っています...');
+    saveBtn.disabled = true;
+
+    let acked = false;
+
+    function handleMessage(event) {
+      if (event.source !== popup) return;
+      if (event.origin !== ALBIREO_ORIGIN) return;
+      const data = event.data;
+      if (!data || data.source !== 'albireo') return;
+
+      if (data.type === 'kotodama:ready') {
+        popup.postMessage({
+          source: 'kotodama',
+          type: 'kotodama:data',
+          payload: result,
+        }, ALBIREO_ORIGIN);
+        setStatus('データを送信しました...');
+      } else if (data.type === 'kotodama:ack') {
+        acked = true;
+        setStatus('Albireoに保存しました', COLOR_SUCCESS);
+        saveBtn.disabled = false;
+        window.removeEventListener('message', handleMessage);
+        clearTimeout(timeoutId);
+      }
+    }
+
+    window.addEventListener('message', handleMessage);
+
+    const timeoutId = setTimeout(() => {
+      if (acked) return;
+      window.removeEventListener('message', handleMessage);
+      setStatus('Albireoから応答がありません', COLOR_ERROR);
+      saveBtn.disabled = false;
+    }, HANDOFF_TIMEOUT_MS);
+  };
+
+  // ---- JSONダウンロード (フォールバック) ----
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 

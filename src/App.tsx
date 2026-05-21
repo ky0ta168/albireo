@@ -1,10 +1,20 @@
 import React, {
   useState,
   useRef,
+  useEffect,
   type ChangeEvent,
   type MouseEvent,
 } from "react";
-import { Typography, Box, AppBar, Menu, Toolbar, Stack } from "@mui/material";
+import {
+  Typography,
+  Box,
+  AppBar,
+  Menu,
+  Toolbar,
+  Stack,
+  Snackbar,
+  SnackbarContent,
+} from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import AddRoundedIcon from "@mui/icons-material/AddRounded";
 import FileUploadRoundedIcon from "@mui/icons-material/FileUploadRounded";
@@ -12,7 +22,42 @@ import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import Player from "./components/Player";
 import SaveVideo from "./components/SaveVideo";
-import { getVideoDataList, type VideoData } from "./utils/index";
+import {
+  getVideoDataList,
+  type VideoData,
+  type KotodamaSubtitle,
+} from "./utils/index";
+
+const KOTODAMA_ALLOWED_ORIGINS = [
+  "https://www.youtube.com",
+  "https://m.youtube.com",
+  "https://youtube.com",
+];
+
+const HANDOFF_TIMEOUT_MS = 15000;
+
+type KotodamaHandoffPayload = {
+  id: string;
+  title: string;
+  subtitles: KotodamaSubtitle[];
+};
+
+const isKotodamaPayload = (value: unknown): value is KotodamaHandoffPayload => {
+  if (typeof value !== "object" || value === null) return false;
+  const v = value as Record<string, unknown>;
+  if (typeof v.id !== "string" || typeof v.title !== "string") return false;
+  if (!Array.isArray(v.subtitles)) return false;
+  return v.subtitles.every((s) => {
+    if (typeof s !== "object" || s === null) return false;
+    const e = s as Record<string, unknown>;
+    return (
+      typeof e.startMs === "number" &&
+      typeof e.durationMs === "number" &&
+      typeof e.subtitle === "string" &&
+      typeof e.translation === "string"
+    );
+  });
+};
 
 const navItemSx = {
   textTransform: "none",
@@ -51,6 +96,84 @@ export default function App() {
   const [selectedRemoveVideo, setSelectedRemoveVideo] =
     useState<VideoData | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [handoffNotice, setHandoffNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("handoff") !== "1") return;
+
+    const cleanUrl = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("handoff");
+      window.history.replaceState({}, "", url.toString());
+    };
+
+    const opener = window.opener as Window | null;
+    if (!opener) {
+      cleanUrl();
+      return;
+    }
+
+    let done = false;
+    const handleMessage = (event: MessageEvent) => {
+      if (!KOTODAMA_ALLOWED_ORIGINS.includes(event.origin)) return;
+      if (event.source !== opener) return;
+      const data = event.data as
+        | { source?: unknown; type?: unknown; payload?: unknown }
+        | undefined;
+      if (!data || data.source !== "kotodama") return;
+      if (data.type !== "kotodama:data") return;
+      if (!isKotodamaPayload(data.payload)) {
+        setHandoffNotice("受信データのフォーマットが不正です");
+        return;
+      }
+
+      const payload = data.payload;
+      const newVideo: VideoData = {
+        id: payload.id,
+        title: payload.title,
+        subtitles: payload.subtitles,
+      };
+      const updated = [...getVideoDataList(), newVideo];
+      window.localStorage.setItem("videoDataList", JSON.stringify(updated));
+      setVideoDataList(updated);
+
+      try {
+        opener.postMessage(
+          { source: "albireo", type: "kotodama:ack" },
+          event.origin,
+        );
+      } catch {
+        // opener may be closed; ignore
+      }
+
+      setHandoffNotice(`「${payload.title}」を保存しました`);
+      done = true;
+      cleanUrl();
+      window.removeEventListener("message", handleMessage);
+      window.clearTimeout(timeoutId);
+    };
+
+    window.addEventListener("message", handleMessage);
+
+    try {
+      opener.postMessage({ source: "albireo", type: "kotodama:ready" }, "*");
+    } catch {
+      // opener may be closed; let timeout handle it
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (done) return;
+      window.removeEventListener("message", handleMessage);
+      setHandoffNotice("kotodamaから応答がありません");
+      cleanUrl();
+    }, HANDOFF_TIMEOUT_MS);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   const handleOpenPlayer = (video: VideoData) => {
     setSelectedVideo(video);
@@ -436,6 +559,26 @@ export default function App() {
         onClose={handleCloseSaveForm}
         handleSetVideoDataList={setVideoDataList}
       />
+
+      <Snackbar
+        open={handoffNotice !== null}
+        autoHideDuration={4000}
+        onClose={() => setHandoffNotice(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <SnackbarContent
+          message={handoffNotice}
+          sx={{
+            background: "rgba(20, 22, 32, 0.85)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            border: "1px solid rgba(255, 255, 255, 0.14)",
+            color: "#e8e8f0",
+            borderRadius: "12px",
+            marginTop: "calc(env(safe-area-inset-top, 0px) + 64px)",
+          }}
+        />
+      </Snackbar>
 
       <Menu
         anchorEl={anchorEl}

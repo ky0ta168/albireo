@@ -4,7 +4,8 @@
         "build": "deno task typecheck && deno run -A npm:vite build",
         "typecheck": "deno run -A npm:typescript/tsc --noEmit",
         "preview": "deno run -A npm:vite preview",
-        "deploy": "rm -rf docs && deno task build && git add docs/ && git commit && git push origin main"
+        "deploy": "rm -rf docs && deno task build && git add docs/ && git commit && git push origin main",
+        "minify:bookmarklet": "deno run -A npm:terser kotodama/bookmarklet.js -c -m --toplevel | (printf 'javascript:'; cat) > kotodama/bookmarklet.min.js"
     },
     "nodeModulesDir": "auto"
 }

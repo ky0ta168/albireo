@@ -10,14 +10,20 @@
 
 字幕データのフォーマットは2種類に対応しています。
 
-### JSON (kotodama) を利用する場合
+### JSON (kotodama) を利用する場合 — 推奨フロー (postMessage handoff)
 
-1. PCブラウザでYouTube動画を開き、自前のブックマークレット「kotodama」を実行
-2. 字幕をOFF→ONに切り替え、「Albireo用JSONをダウンロード」を押下
-3. JSONをスマホでダウンロード
-4. Albireoにアクセスし、「Save」を押下
-5. JSONを選択 (ID・タイトルはJSONから自動入力) し、「Save」を押下
-6. 動画のサムネイルを押下することで、字幕付きで動画を視聴
+1. ブラウザでYouTube動画を開き、ブックマークレット「kotodama」を実行
+2. 字幕をOFF→ONに切り替え、「Albireoに保存」を押下
+3. Albireo が新規タブで開き、字幕データが直接渡されて自動保存される
+4. 動画のサムネイルを押下することで、字幕付きで動画を視聴
+
+### JSON (kotodama) を利用する場合 — フォールバック
+
+postMessage 経由のhandoffが使えない場合 (別端末で視聴したい等):
+
+1. ブックマークレット「kotodama」実行後、「JSONをダウンロード」を押下
+2. `{videoId}_albireo.json` をスマホに転送
+3. Albireoで「Save」→ ファイル選択でこのJSONを読み込ませる
 
 ### Excel (Language Reactor) を利用する場合
 
