@@ -22,11 +22,8 @@ import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import Player from "./components/Player";
 import SaveVideo from "./components/SaveVideo";
-import {
-  getVideoDataList,
-  type VideoData,
-  type KotodamaSubtitle,
-} from "./utils/index";
+import { type VideoData, type KotodamaSubtitle } from "./utils/index";
+import { getAllVideos, putVideo, deleteVideo, putVideoList } from "./utils/db";
 
 const KOTODAMA_ALLOWED_ORIGINS = [
   "https://www.youtube.com",
@@ -85,9 +82,7 @@ const navItemSx = {
 };
 
 export default function App() {
-  const [videoDataList, setVideoDataList] = useState<VideoData[]>(() =>
-    getVideoDataList(),
-  );
+  const [videoDataList, setVideoDataList] = useState<VideoData[]>([]);
   const [openPlayer, setOpenPlayer] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
   const [openSaveForm, setOpenSaveForm] = useState(false);
@@ -97,6 +92,10 @@ export default function App() {
     useState<VideoData | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [handoffNotice, setHandoffNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAllVideos().then(setVideoDataList);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -115,7 +114,7 @@ export default function App() {
     }
 
     let done = false;
-    const handleMessage = (event: MessageEvent) => {
+    const handleMessage = async (event: MessageEvent) => {
       if (!KOTODAMA_ALLOWED_ORIGINS.includes(event.origin)) return;
       if (event.source !== opener) return;
       const data = event.data as
@@ -124,7 +123,7 @@ export default function App() {
       if (!data || data.source !== "kotodama") return;
       if (data.type !== "kotodama:data") return;
       if (!isKotodamaPayload(data.payload)) {
-        setHandoffNotice("受信データのフォーマットが不正です");
+        setHandoffNotice("Invalid handoff data format.");
         return;
       }
 
@@ -134,9 +133,8 @@ export default function App() {
         title: payload.title,
         subtitles: payload.subtitles,
       };
-      const updated = [...getVideoDataList(), newVideo];
-      window.localStorage.setItem("videoDataList", JSON.stringify(updated));
-      setVideoDataList(updated);
+      await putVideo(newVideo);
+      setVideoDataList(await getAllVideos());
 
       try {
         opener.postMessage(
@@ -147,7 +145,7 @@ export default function App() {
         // opener may be closed; ignore
       }
 
-      setHandoffNotice(`「${payload.title}」を保存しました`);
+      setHandoffNotice(`Saved "${payload.title}".`);
       done = true;
       cleanUrl();
       window.removeEventListener("message", handleMessage);
@@ -165,7 +163,7 @@ export default function App() {
     const timeoutId = window.setTimeout(() => {
       if (done) return;
       window.removeEventListener("message", handleMessage);
-      setHandoffNotice("kotodamaから応答がありません");
+      setHandoffNotice("No response from kotodama.");
       cleanUrl();
     }, HANDOFF_TIMEOUT_MS);
 
@@ -203,39 +201,21 @@ export default function App() {
     setOpenMenu(false);
   };
 
-  const removeVideoData = () => {
+  const removeVideoData = async () => {
     if (!selectedRemoveVideo) return;
-    const videoId = selectedRemoveVideo.id;
-    const list = videoDataList.slice().filter((data) => data.id !== videoId);
-    setVideoDataList(list);
-    window.localStorage.setItem("videoDataList", JSON.stringify(list));
+    await deleteVideo(selectedRemoveVideo.id);
+    setVideoDataList(await getAllVideos());
   };
 
-  const handleExport = () => {
-    exportLocalStorageToFile();
-  };
-
-  const exportLocalStorageToFile = () => {
-    const data: Record<string, unknown> = {};
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key === null) continue;
-      const raw = localStorage.getItem(key);
-      if (raw === null) continue;
-      try {
-        data[key] = JSON.parse(raw);
-      } catch {
-        data[key] = raw;
-      }
-    }
-
-    const json = JSON.stringify(data, null, 2);
+  const handleExport = async () => {
+    const videoDataList = await getAllVideos();
+    const json = JSON.stringify({ videoDataList }, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
     const a = document.createElement("a");
     a.href = url;
-    a.download = "videolist.json";
+    a.download = "albireo.json";
     a.click();
 
     URL.revokeObjectURL(url);
@@ -250,25 +230,27 @@ export default function App() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const json = JSON.parse(e.target?.result as string);
+        const json = JSON.parse(e.target?.result as string) as {
+          videoDataList?: unknown;
+        };
 
         if (typeof json !== "object" || json === null) {
           alert("Invalid JSON format.");
           return;
         }
+        if (!Array.isArray(json.videoDataList)) {
+          alert("Invalid JSON: video list is missing.");
+          return;
+        }
 
-        if (window.confirm(`Do you want to load "${file.name}"?`)) {
-          for (const [key, value] of Object.entries(json)) {
-            const stringValue =
-              typeof value === "string" ? value : JSON.stringify(value);
-            localStorage.setItem(key, stringValue);
-          }
-          setVideoDataList(getVideoDataList());
+        if (window.confirm(`Load "${file.name}"?`)) {
+          await putVideoList(json.videoDataList as VideoData[]);
+          setVideoDataList(await getAllVideos());
         }
       } catch (err) {
-        alert("Failed to parse JSON: " + (err as Error).message);
+        alert("Failed to parse JSON: " + (err as Error).message + ".");
       }
     };
 
@@ -466,11 +448,9 @@ export default function App() {
             }}
           >
             <Typography variant="body1" sx={{ fontWeight: 500 }}>
-              保存された動画はまだありません
+              No videos saved yet.
             </Typography>
-            <Typography variant="caption">
-              「Save」から動画を追加してください
-            </Typography>
+            <Typography variant="caption">Tap Save to add a video.</Typography>
           </Box>
         )}
       </Box>
@@ -612,9 +592,7 @@ export default function App() {
           onClick={() => {
             if (
               selectedRemoveVideo &&
-              window.confirm(
-                `Do you want to remove "${selectedRemoveVideo.title}"?`,
-              )
+              window.confirm(`Remove "${selectedRemoveVideo.title}"?`)
             ) {
               removeVideoData();
             }

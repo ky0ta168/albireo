@@ -16,13 +16,5 @@ export type VideoData = {
   id: string;
   title: string;
   subtitles: VideoSubtitles | null;
-};
-
-export const getVideoDataList = (): VideoData[] => {
-  const videoDataList = window.localStorage.getItem("videoDataList");
-  if (videoDataList) {
-    return JSON.parse(videoDataList) as VideoData[];
-  }
-
-  return [];
+  order?: number;
 };

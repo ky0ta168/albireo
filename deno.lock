@@ -7,14 +7,16 @@
     "npm:@mui/material@^9.0.1": "9.0.1_@emotion+react@11.14.0__react@19.2.6_@emotion+styled@11.14.1__@emotion+react@11.14.0___react@19.2.6__react@19.2.6_@types+react@19.2.15_react@19.2.6_react-dom@19.2.6__react@19.2.6",
     "npm:@types/react-dom@^19.2.3": "19.2.3_@types+react@19.2.15",
     "npm:@types/react@^19.2.15": "19.2.15",
-    "npm:@vitejs/plugin-react@^6.0.2": "6.0.2_vite@8.0.14",
+    "npm:@vitejs/plugin-react@^6.0.2": "6.0.2_vite@8.0.14__terser@5.48.0_terser@5.48.0",
+    "npm:idb@^8.0.3": "8.0.3",
     "npm:react-dom@^19.2.6": "19.2.6_react@19.2.6",
     "npm:react-player@^3.4.0": "3.4.0_@types+react@19.2.15_react@19.2.6_react-dom@19.2.6__react@19.2.6_@svta+cml-cta@1.0.1__@svta+cml-structured-field-values@1.0.1___@svta+cml-utils@1.0.1__@svta+cml-utils@1.0.1_@svta+cml-structured-field-values@1.0.1__@svta+cml-utils@1.0.1_@svta+cml-utils@1.0.1",
     "npm:react@^19.2.6": "19.2.6",
+    "npm:terser@*": "5.48.0",
     "npm:typescript@*": "6.0.3",
     "npm:typescript@^6.0.3": "6.0.3",
-    "npm:vite@*": "8.0.14",
-    "npm:vite@^8.0.14": "8.0.14"
+    "npm:vite@*": "8.0.14_terser@5.48.0",
+    "npm:vite@^8.0.14": "8.0.14_terser@5.48.0"
   },
   "npm": {
     "@babel/code-frame@7.29.0": {
@@ -119,7 +121,7 @@
         "convert-source-map",
         "escape-string-regexp",
         "find-root",
-        "source-map",
+        "source-map@0.5.7",
         "stylis"
       ]
     },
@@ -209,6 +211,13 @@
     },
     "@jridgewell/resolve-uri@3.1.2": {
       "integrity": "sha512-bRISgCIjP20/tbWSPWMEi54QVPRZExkuD9lJL+UIxUKtwVJA8wW1Trb1jMs1RFXo1CBTNZ/5hpC9QvmKWdopKw=="
+    },
+    "@jridgewell/source-map@0.3.11": {
+      "integrity": "sha512-ZMp1V8ZFcPG5dIWnQLr3NSI1MiCU7UETdS/A0G8V/XWHvJv3ZsFqutJn1Y5RPmAPX6F3BiE397OqveU/9NCuIA==",
+      "dependencies": [
+        "@jridgewell/gen-mapping",
+        "@jridgewell/trace-mapping"
+      ]
     },
     "@jridgewell/sourcemap-codec@1.5.5": {
       "integrity": "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="
@@ -580,12 +589,16 @@
         "weakmap-polyfill"
       ]
     },
-    "@vitejs/plugin-react@6.0.2_vite@8.0.14": {
+    "@vitejs/plugin-react@6.0.2_vite@8.0.14__terser@5.48.0_terser@5.48.0": {
       "integrity": "sha512-DlSMqo4WhThw4vB8Mpn0Woe9J+Jfq1geJ61AKW0QEgLzGMNwtIMdxbDUzLxcun8W7NbJO0e2Jg/Nxm3cCSVzzg==",
       "dependencies": [
         "@rolldown/pluginutils",
         "vite"
       ]
+    },
+    "acorn@8.16.0": {
+      "integrity": "sha512-UVJyE9MttOsBQIDKw1skb9nAwQuR5wuGD3+82K6JgJlm/Y+KI92oNsMNGZCYdDsVtRHSak0pcV5Dno5+4jh9sw==",
+      "bin": true
     },
     "babel-plugin-macros@3.1.0": {
       "integrity": "sha512-Cg7TFGpIr01vOQNODXOOaGz2NpCU5gl8x1qJFbb6hbZxR7XrcE2vtbAsTAbJ7/xwJtUuJEw8K8Zr/AE0LHlesg==",
@@ -613,6 +626,9 @@
         "is-decimal"
       ]
     },
+    "buffer-from@1.1.2": {
+      "integrity": "sha512-E+XQCRwSbaaiChtv6k6Dwgc+bx+Bs6vuKJHHl5kox/BaKbhiXzqQOwK4cO22yElGp2OCmjwVhT3HmxgyPGnJfQ=="
+    },
     "callsites@3.1.0": {
       "integrity": "sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ=="
     },
@@ -636,6 +652,9 @@
     },
     "codem-isoboxer@0.3.10": {
       "integrity": "sha512-eNk3TRV+xQMJ1PEj0FQGY8KD4m0GPxT487XJ+Iftm7mVa9WpPFDMWqPt+46buiP5j5Wzqe5oMIhqBcAeKfygSA=="
+    },
+    "commander@2.20.3": {
+      "integrity": "sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ=="
     },
     "convert-source-map@1.9.0": {
       "integrity": "sha512-ASFBup0Mz1uyiIjANan1jzLQami9z1PoYSZCiiYW2FczPbenXc45FZdBZLzOT+r6+iciuEModtmCti+hjaAk0A=="
@@ -761,6 +780,9 @@
     },
     "html-entities@2.6.0": {
       "integrity": "sha512-kig+rMn/QOVRvr7c86gQ8lWXq+Hkv6CbAH1hLu+RG338StTpE8Z0b44SDVaqVu7HGKf27frdmUYEs9hTUX/cLQ=="
+    },
+    "idb@8.0.3": {
+      "integrity": "sha512-LtwtVyVYO5BqRvcsKuB2iUMnHwPVByPCXFXOpuU96IZPPoPN6xjOGxZQ74pgSVVLQWtUOYgyeL4GE98BY5D3wg=="
     },
     "immediate@3.0.6": {
       "integrity": "sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ=="
@@ -1078,8 +1100,18 @@
     "source-map-js@1.2.1": {
       "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA=="
     },
+    "source-map-support@0.5.21": {
+      "integrity": "sha512-uBHU3L3czsIyYXKX88fdrGovxdSCoTGDRZ6SYXtSRxLZUzHg5P/66Ht6uoUlHu9EZod+inXhKo3qQgwXUT/y1w==",
+      "dependencies": [
+        "buffer-from",
+        "source-map@0.6.1"
+      ]
+    },
     "source-map@0.5.7": {
       "integrity": "sha512-LbrmJOMUSdEVxIKvdcJzQC+nQhe8FUZQTXQy6+I75skNgn3OoQ0DZA8YnFa7gp8tqtL3KPf1kmo0R5DoApeSGQ=="
+    },
+    "source-map@0.6.1": {
+      "integrity": "sha512-UjgapumWlbMhkBgzT7Ykc5YXUT46F0iKu8SGXq0bcwP5dz/h0Plj6enJqjz1Zbq2l5WaqYnrVbwWOWMyF3F47g=="
     },
     "spotify-audio-element@1.0.4": {
       "integrity": "sha512-QdKrJPkYCzaNwwz2vN2eDGyoW0KmQFmnwVprB41mpMzj4qujbqr6pegEchQeTn0b5PceKiLoVu0pp2QDpTcWnw=="
@@ -1092,6 +1124,16 @@
     },
     "supports-preserve-symlinks-flag@1.0.0": {
       "integrity": "sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w=="
+    },
+    "terser@5.48.0": {
+      "integrity": "sha512-J/9An6vs9Us6wKRriSFXBWdRZapREHqFzdNUKk0pmu804EMR6dr6winwo7e5JDxN4xahxQsuysyYFwlwj4XN/Q==",
+      "dependencies": [
+        "@jridgewell/source-map",
+        "acorn",
+        "commander",
+        "source-map-support"
+      ],
+      "bin": true
     },
     "tiktok-video-element@0.1.2": {
       "integrity": "sha512-w6TboLm236XJKKiIXIhCbYCnUxbixBbaAoty0etaEAZ/2kHkVIdfZdv2oouMU/HGMsWCHI/VjQ3wU3MJ+s192Q=="
@@ -1124,17 +1166,21 @@
         "media-played-ranges-mixin"
       ]
     },
-    "vite@8.0.14": {
+    "vite@8.0.14_terser@5.48.0": {
       "integrity": "sha512-s4BJJ+5y1pYL6Otw51FHhVJQhPnuRinKig64g/1+EUNaJsd3gCKdD31IPFvswUgW9/60QT9oFHbZHbQK5imcxw==",
       "dependencies": [
         "lightningcss",
         "picomatch",
         "postcss",
         "rolldown",
+        "terser",
         "tinyglobby"
       ],
       "optionalDependencies": [
         "fsevents"
+      ],
+      "optionalPeers": [
+        "terser"
       ],
       "bin": true
     },
@@ -1166,6 +1212,7 @@
       "npm:@types/react-dom@^19.2.3",
       "npm:@types/react@^19.2.15",
       "npm:@vitejs/plugin-react@^6.0.2",
+      "npm:idb@^8.0.3",
       "npm:react-dom@^19.2.6",
       "npm:react-player@^3.4.0",
       "npm:react@^19.2.6",

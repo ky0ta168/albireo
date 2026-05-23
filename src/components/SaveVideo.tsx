@@ -12,12 +12,12 @@ import CloseIcon from "@mui/icons-material/Close";
 import CloudUploadRoundedIcon from "@mui/icons-material/CloudUploadRounded";
 import * as XLSX from "xlsx";
 import {
-  getVideoDataList,
   type VideoData,
   type VideoSubtitles,
   type KotodamaSubtitle,
   type LanguageReactorSubtitles,
 } from "../utils";
+import { getAllVideos, putVideo } from "../utils/db";
 
 type SaveVideoProps = {
   open: boolean;
@@ -74,14 +74,14 @@ function SaveVideo({ open, onClose, handleSetVideoDataList }: SaveVideoProps) {
             subtitles?: KotodamaSubtitle[];
           };
           if (!Array.isArray(data.subtitles)) {
-            alert("Invalid JSON: subtitles array is missing");
+            alert("Invalid JSON: subtitles are missing.");
             return;
           }
           setSubtitles(data.subtitles);
           if (data.id) setVideoId(data.id);
           if (data.title) setVideoTitle(data.title);
         } catch (err) {
-          alert("Failed to parse JSON: " + (err as Error).message);
+          alert("Failed to parse JSON: " + (err as Error).message + ".");
         }
       };
       return;
@@ -113,19 +113,15 @@ function SaveVideo({ open, onClose, handleSetVideoDataList }: SaveVideoProps) {
     };
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const subtitlesData: VideoData = {
       id: videoId,
       title: videoTitle,
       subtitles: subtitles,
     };
 
-    const videoDataList = getVideoDataList();
-    videoDataList.push(subtitlesData);
-
-    window.localStorage.setItem("videoDataList", JSON.stringify(videoDataList));
-
-    handleSetVideoDataList(videoDataList);
+    await putVideo(subtitlesData);
+    handleSetVideoDataList(await getAllVideos());
 
     clearInput();
     onClose();

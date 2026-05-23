@@ -4,7 +4,7 @@
 
   const videoId = new URLSearchParams(location.search).get('v');
   if (!videoId) {
-    alert('YouTubeの動画ページで実行してください');
+    alert('Run this on a YouTube video page.');
     window.__ytSubBM = false;
     return;
   }
@@ -39,7 +39,7 @@
   const header = document.createElement('div');
   header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 -12px 8px;padding:0 12px 8px;border-bottom:1px solid rgba(255,255,255,0.08)';
   const title = document.createElement('b');
-  title.textContent = '言霊 / Kotodama';
+  title.textContent = 'Kotodama';
   title.style.cssText = 'font-weight:600;letter-spacing:0.04em;font-size:13px';
   const closeBtn = document.createElement('span');
   closeBtn.textContent = '×';
@@ -53,11 +53,11 @@
   // ステータス
   const status = document.createElement('div');
   status.style.cssText = 'margin-bottom:8px;color:' + COLOR_DEFAULT + ';font-size:12px;line-height:1.4';
-  status.textContent = '字幕をOFF→ONに切り替えてください';
+  status.textContent = 'Toggle subtitles OFF → ON.';
 
   // Albireoに保存ボタン（プライマリ）
   const saveBtn = document.createElement('button');
-  saveBtn.textContent = 'Albireoに保存';
+  saveBtn.textContent = 'Save to Albireo';
   saveBtn.style.cssText = 'visibility:hidden;width:100%;padding:8px;background:linear-gradient(135deg,rgba(124,58,237,0.95),rgba(236,72,153,0.95));color:#fff;border:none;border-radius:8px;cursor:pointer;font:600 13px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
   saveBtn.onmouseover = () => saveBtn.style.filter = 'brightness(1.1)';
   saveBtn.onmouseout = () => saveBtn.style.filter = 'brightness(1)';
@@ -66,7 +66,7 @@
 
   // JSONダウンロードボタン（フォールバック・セカンダリ）
   const dlBtn = document.createElement('button');
-  dlBtn.textContent = 'JSONをダウンロード';
+  dlBtn.textContent = 'Download JSON';
   dlBtn.style.cssText = 'visibility:hidden;width:100%;margin-top:6px;padding:7px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.18);border-radius:8px;cursor:pointer;font:500 12px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
   dlBtn.onmouseover = () => dlBtn.style.filter = 'brightness(1.2)';
   dlBtn.onmouseout = () => dlBtn.style.filter = 'brightness(1)';
@@ -117,7 +117,7 @@
     fetching = true;
 
     const lang = 'ja';
-    setStatus('字幕を取得中...');
+    setStatus('Fetching subtitles...');
 
     try {
       const [origText, transText] = await Promise.all([
@@ -126,12 +126,12 @@
       ]);
 
       if (origText.length < 20) {
-        setStatus('元字幕データが空でした', COLOR_ERROR);
+        setStatus('No source subtitles found.', COLOR_ERROR);
         fetching = false;
         return;
       }
       if (transText.length < 20) {
-        setStatus('翻訳データが空でした(多言語手動字幕の動画?)', COLOR_ERROR);
+        setStatus('No translation found (manually-captioned video?).', COLOR_ERROR);
         fetching = false;
         return;
       }
@@ -140,7 +140,7 @@
       const trans = parseEvents(transText);
 
       if (origs.length === 0) {
-        setStatus('字幕のパースに失敗しました', COLOR_ERROR);
+        setStatus('Failed to parse subtitles.', COLOR_ERROR);
         fetching = false;
         return;
       }
@@ -159,11 +159,11 @@
         subtitles,
       };
 
-      setStatus('取得完了: ' + subtitles.length + ' 件', COLOR_SUCCESS);
+      setStatus('Fetched ' + subtitles.length + ' lines.', COLOR_SUCCESS);
       saveBtn.style.visibility = 'visible';
       dlBtn.style.visibility = 'visible';
     } catch (e) {
-      setStatus('エラー: ' + e.message, COLOR_ERROR);
+      setStatus('Error: ' + e.message + '.', COLOR_ERROR);
       fetching = false;
     }
   }
@@ -175,11 +175,11 @@
 
     const popup = window.open(ALBIREO_URL, '_blank');
     if (!popup) {
-      setStatus('ポップアップを許可してください', COLOR_ERROR);
+      setStatus('Please allow popups.', COLOR_ERROR);
       return;
     }
 
-    setStatus('Albireoの準備を待っています...');
+    setStatus('Waiting for Albireo...');
     saveBtn.disabled = true;
 
     let acked = false;
@@ -196,10 +196,10 @@
           type: 'kotodama:data',
           payload: result,
         }, ALBIREO_ORIGIN);
-        setStatus('データを送信しました...');
+        setStatus('Sending data...');
       } else if (data.type === 'kotodama:ack') {
         acked = true;
-        setStatus('Albireoに保存しました', COLOR_SUCCESS);
+        setStatus('Saved to Albireo.', COLOR_SUCCESS);
         saveBtn.disabled = false;
         window.removeEventListener('message', handleMessage);
         clearTimeout(timeoutId);
@@ -211,7 +211,7 @@
     const timeoutId = setTimeout(() => {
       if (acked) return;
       window.removeEventListener('message', handleMessage);
-      setStatus('Albireoから応答がありません', COLOR_ERROR);
+      setStatus('No response from Albireo.', COLOR_ERROR);
       saveBtn.disabled = false;
     }, HANDOFF_TIMEOUT_MS);
   };
@@ -230,12 +230,12 @@
         const file = new File([json], filename, { type: 'application/json' });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], title: filename });
-          setStatus('共有しました', COLOR_SUCCESS);
+          setStatus('Shared.', COLOR_SUCCESS);
           return;
         }
       } catch (e) {
         if (e.name === 'AbortError') return;
-        setStatus('共有失敗: ' + e.message, COLOR_ERROR);
+        setStatus('Share failed: ' + e.message + '.', COLOR_ERROR);
         return;
       }
     }
