@@ -7,5 +7,21 @@
         "deploy": "rm -rf docs && deno task build && git add docs/ && git commit && git push origin main",
         "minify:bookmarklet": "deno run -A npm:terser kotodama/bookmarklet.js -c -m --toplevel | (printf 'javascript:'; cat) > kotodama/bookmarklet.min.js"
     },
-    "nodeModulesDir": "auto"
+    "nodeModulesDir": "auto",
+    "imports": {
+        "@emotion/react": "npm:@emotion/react@^11.14.0",
+        "@emotion/styled": "npm:@emotion/styled@^11.14.1",
+        "@mui/icons-material": "npm:@mui/icons-material@^9.0.1",
+        "@mui/icons-material/": "npm:/@mui/icons-material@^9.0.1/",
+        "@mui/material": "npm:@mui/material@^9.0.1",
+        "react": "npm:react@^19.2.6",
+        "react-dom": "npm:react-dom@^19.2.6",
+        "react-dom/": "npm:/react-dom@^19.2.6/",
+        "react-player": "npm:react-player@^3.4.0",
+        "vite": "npm:vite@^8.0.14",
+        "@vitejs/plugin-react": "npm:@vitejs/plugin-react@^6.0.2",
+        "typescript": "npm:typescript@^6.0.3",
+        "@types/react": "npm:@types/react@^19.2.15",
+        "@types/react-dom": "npm:@types/react-dom@^19.2.3"
+    }
 }
