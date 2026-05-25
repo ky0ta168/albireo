@@ -1,10 +1,13 @@
-html, body, #root {
+html,
+body,
+#root {
   min-height: 100dvh;
 }
 
 body {
-  font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN",
-    "Hiragino Sans", "Noto Sans", Meiryo, sans-serif;
+  font-family:
+    "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans",
+    "Noto Sans", Meiryo, sans-serif;
   margin: 0;
   padding: 0;
   color: #e8e8f0;

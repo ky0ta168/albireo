@@ -22,7 +22,12 @@ import FileDownloadRoundedIcon from "@mui/icons-material/FileDownloadRounded";
 import PlayArrowRoundedIcon from "@mui/icons-material/PlayArrowRounded";
 import Player from "./components/Player";
 import SaveVideo from "./components/SaveVideo";
-import { type VideoData, type KotodamaSubtitle } from "./utils/index";
+import {
+  type VideoData,
+  type KotodamaSubtitle,
+  formatDuration,
+  formatPublishDate,
+} from "./utils/index";
 import { getAllVideos, putVideo, deleteVideo, putVideoList } from "./utils/db";
 
 const KOTODAMA_ALLOWED_ORIGINS = [
@@ -37,12 +42,19 @@ type KotodamaHandoffPayload = {
   id: string;
   title: string;
   subtitles: KotodamaSubtitle[];
+  duration?: number;
+  channel?: string;
+  publishDate?: string;
 };
 
 const isKotodamaPayload = (value: unknown): value is KotodamaHandoffPayload => {
   if (typeof value !== "object" || value === null) return false;
   const v = value as Record<string, unknown>;
   if (typeof v.id !== "string" || typeof v.title !== "string") return false;
+  if (v.duration !== undefined && typeof v.duration !== "number") return false;
+  if (v.channel !== undefined && typeof v.channel !== "string") return false;
+  if (v.publishDate !== undefined && typeof v.publishDate !== "string")
+    return false;
   if (!Array.isArray(v.subtitles)) return false;
   return v.subtitles.every((s) => {
     if (typeof s !== "object" || s === null) return false;
@@ -83,6 +95,7 @@ const navItemSx = {
 
 export default function App() {
   const [videoDataList, setVideoDataList] = useState<VideoData[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [openPlayer, setOpenPlayer] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoData | null>(null);
   const [openSaveForm, setOpenSaveForm] = useState(false);
@@ -94,7 +107,9 @@ export default function App() {
   const [handoffNotice, setHandoffNotice] = useState<string | null>(null);
 
   useEffect(() => {
-    getAllVideos().then(setVideoDataList);
+    getAllVideos()
+      .then(setVideoDataList)
+      .finally(() => setLoaded(true));
   }, []);
 
   useEffect(() => {
@@ -132,6 +147,9 @@ export default function App() {
         id: payload.id,
         title: payload.title,
         subtitles: payload.subtitles,
+        duration: payload.duration,
+        channel: payload.channel,
+        publishDate: payload.publishDate,
       };
       await putVideo(newVideo);
       setVideoDataList(await getAllVideos());
@@ -346,11 +364,16 @@ export default function App() {
                 >
                   <Box
                     component="img"
-                    src={`https://i.ytimg.com/vi/${video.id}/maxresdefault.jpg`}
+                    // maxresdefault は未生成だと404ではなくグレー代替を200で返す動画があり
+                    // onError が効かない。ほぼ全動画にある hqdefault を既定に使う。
+                    src={`https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`}
                     alt={video.title}
                     loading="lazy"
                     onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                      e.currentTarget.src = `https://i.ytimg.com/vi/${video.id}/hqdefault.jpg`;
+                      const img = e.currentTarget;
+                      if (!img.src.endsWith("/mqdefault.jpg")) {
+                        img.src = `https://i.ytimg.com/vi/${video.id}/mqdefault.jpg`;
+                      }
                     }}
                     sx={{
                       width: "100%",
@@ -360,6 +383,25 @@ export default function App() {
                       borderRadius: 0,
                     }}
                   />
+                  {typeof video.duration === "number" && (
+                    <Typography
+                      sx={{
+                        position: "absolute",
+                        right: 4,
+                        bottom: 4,
+                        paddingX: 0.75,
+                        paddingY: 0.25,
+                        background: "rgba(0, 0, 0, 0.6)",
+                        color: "#fff",
+                        fontSize: "0.7rem",
+                        fontWeight: 600,
+                        lineHeight: 1.4,
+                        borderRadius: "4px",
+                      }}
+                    >
+                      {formatDuration(video.duration)}
+                    </Typography>
+                  )}
                 </Box>
 
                 <Box
@@ -398,12 +440,23 @@ export default function App() {
                       variant="caption"
                       sx={{
                         color: "rgba(232, 232, 240, 0.5)",
-                        fontFamily: "ui-monospace, SFMono-Regular, monospace",
                         fontSize: "0.7rem",
                       }}
                     >
-                      {video.id}
+                      {video.channel || video.id}
                     </Typography>
+                    {video.publishDate && (
+                      <Typography
+                        variant="caption"
+                        sx={{
+                          display: "block",
+                          color: "rgba(232, 232, 240, 0.4)",
+                          fontSize: "0.7rem",
+                        }}
+                      >
+                        {formatPublishDate(video.publishDate)}
+                      </Typography>
+                    )}
                   </Box>
                   <Box
                     onClick={(event: MouseEvent<HTMLElement>) => {
@@ -439,7 +492,7 @@ export default function App() {
             ))}
         </Stack>
 
-        {videoDataList.length === 0 && (
+        {loaded && videoDataList.length === 0 && (
           <Box
             sx={{
               marginTop: 6,

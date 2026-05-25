@@ -2,76 +2,154 @@
   if (window.__ytSubBM) return;
   window.__ytSubBM = true;
 
-  const videoId = new URLSearchParams(location.search).get('v');
+  const videoId = new URLSearchParams(location.search).get("v");
   if (!videoId) {
-    alert('Run this on a YouTube video page.');
+    alert("Run this on a YouTube video page.");
     window.__ytSubBM = false;
     return;
   }
 
   // 動画タイトル（末尾の " - YouTube" を除去）
-  const videoTitle = document.title.replace(/\s*-\s*YouTube\s*$/, '').trim();
+  const videoTitle = document.title.replace(/\s*-\s*YouTube\s*$/, "").trim();
 
-  const ALBIREO_ORIGIN = 'https://ky0ta168.github.io';
-  const ALBIREO_URL = ALBIREO_ORIGIN + '/albireo/?handoff=1';
+  // 動画の長さ(秒)。プレイヤー API → <video> の順に試す。取れなければ undefined。
+  function getVideoDuration() {
+    const player = document.getElementById("movie_player");
+    if (player && typeof player.getDuration === "function") {
+      const d = player.getDuration();
+      if (isFinite(d) && d > 0) return Math.round(d);
+    }
+    const v = document.querySelector("video");
+    if (v && isFinite(v.duration) && v.duration > 0)
+      return Math.round(v.duration);
+    return undefined;
+  }
+
+  // チャンネル名。プレイヤー API → DOM の順に試す。取れなければ undefined。
+  function getChannelName() {
+    const player = document.getElementById("movie_player");
+    if (player && typeof player.getVideoData === "function") {
+      const data = player.getVideoData();
+      if (data && data.author) return data.author;
+    }
+    const el = document.querySelector(
+      "ytd-channel-name a, #owner #channel-name a",
+    );
+    if (el && el.textContent) return el.textContent.trim() || undefined;
+    return undefined;
+  }
+
+  // 公開日 "YYYY-MM-DD"。microformat を持つソースを順に試す。
+  function publishDateFromResponse(r) {
+    const mf = r && r.microformat && r.microformat.playerMicroformatRenderer;
+    const d = mf && (mf.publishDate || mf.uploadDate);
+    return typeof d === "string" && d ? d.slice(0, 10) : undefined;
+  }
+
+  function getPublishDate() {
+    // 1) ページ初期データ。現在の動画IDと一致する時だけ使う(SPA遷移で古い場合を除外)。
+    const init = window.ytInitialPlayerResponse;
+    if (init && init.videoDetails && init.videoDetails.videoId === videoId) {
+      const d = publishDateFromResponse(init);
+      if (d) return d;
+    }
+    // 2) プレイヤー API(microformat が落ちていることがあるのでフォールバック扱い)。
+    const player = document.getElementById("movie_player");
+    if (player && typeof player.getPlayerResponse === "function") {
+      const d = publishDateFromResponse(player.getPlayerResponse());
+      if (d) return d;
+    }
+    // 3) DOM の microdata。
+    const meta = document.querySelector(
+      'meta[itemprop="datePublished"], meta[itemprop="uploadDate"]',
+    );
+    const content = meta && meta.getAttribute("content");
+    if (content) return content.slice(0, 10);
+
+    return undefined;
+  }
+
+  const ALBIREO_ORIGIN = "https://ky0ta168.github.io";
+  const ALBIREO_URL = ALBIREO_ORIGIN + "/albireo/?handoff=1";
   const HANDOFF_TIMEOUT_MS = 15000;
 
-  const FONT = '-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif';
-  const COLOR_DEFAULT = 'rgba(255,255,255,0.55)';
-  const COLOR_ERROR = '#ff7a85';
-  const COLOR_SUCCESS = '#7ce895';
+  const FONT =
+    '-apple-system,BlinkMacSystemFont,"Hiragino Sans","Segoe UI",sans-serif';
+  const COLOR_DEFAULT = "rgba(255,255,255,0.55)";
+  const COLOR_ERROR = "#ff7a85";
+  const COLOR_SUCCESS = "#7ce895";
 
   // ---- UI（innerHTML不使用）----
-  const panel = document.createElement('div');
+  const panel = document.createElement("div");
   panel.style.cssText = [
-    'position:fixed', 'bottom:20px', 'right:20px', 'z-index:2147483647',
-    'background:rgba(20,22,32,0.55)',
-    'backdrop-filter:blur(24px) saturate(180%)',
-    '-webkit-backdrop-filter:blur(24px) saturate(180%)',
-    'color:rgba(255,255,255,0.95)',
-    'padding:10px 12px', 'border-radius:14px',
-    'border:1px solid rgba(255,255,255,0.14)',
-    'font:13px/1.5 ' + FONT, 'width:230px',
-    'box-shadow:0 10px 40px rgba(0,0,0,0.45)',
-    'letter-spacing:0.01em',
-  ].join(';');
+    "position:fixed",
+    "bottom:20px",
+    "right:20px",
+    "z-index:2147483647",
+    "background:rgba(20,22,32,0.55)",
+    "backdrop-filter:blur(24px) saturate(180%)",
+    "-webkit-backdrop-filter:blur(24px) saturate(180%)",
+    "color:rgba(255,255,255,0.95)",
+    "padding:10px 12px",
+    "border-radius:14px",
+    "border:1px solid rgba(255,255,255,0.14)",
+    "font:13px/1.5 " + FONT,
+    "width:230px",
+    "box-shadow:0 10px 40px rgba(0,0,0,0.45)",
+    "letter-spacing:0.01em",
+  ].join(";");
 
-  const header = document.createElement('div');
-  header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin:0 -12px 8px;padding:0 12px 8px;border-bottom:1px solid rgba(255,255,255,0.08)';
-  const title = document.createElement('b');
-  title.textContent = 'Kotodama';
-  title.style.cssText = 'font-weight:600;letter-spacing:0.04em;font-size:13px';
-  const closeBtn = document.createElement('span');
-  closeBtn.textContent = '×';
-  closeBtn.style.cssText = 'cursor:pointer;font-size:20px;line-height:1;color:rgba(255,255,255,0.5);transition:color 0.2s';
-  closeBtn.onmouseover = () => closeBtn.style.color = 'rgba(255,255,255,0.95)';
-  closeBtn.onmouseout = () => closeBtn.style.color = 'rgba(255,255,255,0.5)';
-  closeBtn.onclick = () => { panel.remove(); window.__ytSubBM = false; };
+  const header = document.createElement("div");
+  header.style.cssText =
+    "display:flex;justify-content:space-between;align-items:center;margin:0 -12px 8px;padding:0 12px 8px;border-bottom:1px solid rgba(255,255,255,0.08)";
+  const title = document.createElement("b");
+  title.textContent = "Kotodama";
+  title.style.cssText = "font-weight:600;letter-spacing:0.04em;font-size:13px";
+  const closeBtn = document.createElement("span");
+  closeBtn.textContent = "×";
+  closeBtn.style.cssText =
+    "cursor:pointer;font-size:20px;line-height:1;color:rgba(255,255,255,0.5);transition:color 0.2s";
+  closeBtn.onmouseover = () =>
+    (closeBtn.style.color = "rgba(255,255,255,0.95)");
+  closeBtn.onmouseout = () => (closeBtn.style.color = "rgba(255,255,255,0.5)");
+  closeBtn.onclick = () => {
+    panel.remove();
+    window.__ytSubBM = false;
+  };
   header.appendChild(title);
   header.appendChild(closeBtn);
 
   // ステータス
-  const status = document.createElement('div');
-  status.style.cssText = 'margin-bottom:8px;color:' + COLOR_DEFAULT + ';font-size:12px;line-height:1.4';
-  status.textContent = 'Toggle subtitles OFF → ON.';
+  const status = document.createElement("div");
+  status.style.cssText =
+    "margin-bottom:8px;color:" +
+    COLOR_DEFAULT +
+    ";font-size:12px;line-height:1.4";
+  status.textContent = "Toggle subtitles OFF → ON.";
 
   // Albireoに保存ボタン（プライマリ）
-  const saveBtn = document.createElement('button');
-  saveBtn.textContent = 'Save to Albireo';
-  saveBtn.style.cssText = 'visibility:hidden;width:100%;padding:8px;background:linear-gradient(135deg,rgba(124,58,237,0.95),rgba(236,72,153,0.95));color:#fff;border:none;border-radius:8px;cursor:pointer;font:600 13px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
-  saveBtn.onmouseover = () => saveBtn.style.filter = 'brightness(1.1)';
-  saveBtn.onmouseout = () => saveBtn.style.filter = 'brightness(1)';
-  saveBtn.onmousedown = () => saveBtn.style.transform = 'scale(0.97)';
-  saveBtn.onmouseup = () => saveBtn.style.transform = 'scale(1)';
+  const saveBtn = document.createElement("button");
+  saveBtn.textContent = "Save to Albireo";
+  saveBtn.style.cssText =
+    "visibility:hidden;width:100%;padding:8px;background:linear-gradient(135deg,rgba(124,58,237,0.95),rgba(236,72,153,0.95));color:#fff;border:none;border-radius:8px;cursor:pointer;font:600 13px/1 " +
+    FONT +
+    ";letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s";
+  saveBtn.onmouseover = () => (saveBtn.style.filter = "brightness(1.1)");
+  saveBtn.onmouseout = () => (saveBtn.style.filter = "brightness(1)");
+  saveBtn.onmousedown = () => (saveBtn.style.transform = "scale(0.97)");
+  saveBtn.onmouseup = () => (saveBtn.style.transform = "scale(1)");
 
   // JSONダウンロードボタン（フォールバック・セカンダリ）
-  const dlBtn = document.createElement('button');
-  dlBtn.textContent = 'Download JSON';
-  dlBtn.style.cssText = 'visibility:hidden;width:100%;margin-top:6px;padding:7px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.18);border-radius:8px;cursor:pointer;font:500 12px/1 ' + FONT + ';letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s';
-  dlBtn.onmouseover = () => dlBtn.style.filter = 'brightness(1.2)';
-  dlBtn.onmouseout = () => dlBtn.style.filter = 'brightness(1)';
-  dlBtn.onmousedown = () => dlBtn.style.transform = 'scale(0.97)';
-  dlBtn.onmouseup = () => dlBtn.style.transform = 'scale(1)';
+  const dlBtn = document.createElement("button");
+  dlBtn.textContent = "Download JSON";
+  dlBtn.style.cssText =
+    "visibility:hidden;width:100%;margin-top:6px;padding:7px;background:rgba(255,255,255,0.06);color:rgba(255,255,255,0.85);border:1px solid rgba(255,255,255,0.18);border-radius:8px;cursor:pointer;font:500 12px/1 " +
+    FONT +
+    ";letter-spacing:0.04em;transition:transform 0.15s,filter 0.15s";
+  dlBtn.onmouseover = () => (dlBtn.style.filter = "brightness(1.2)");
+  dlBtn.onmouseout = () => (dlBtn.style.filter = "brightness(1)");
+  dlBtn.onmousedown = () => (dlBtn.style.transform = "scale(0.97)");
+  dlBtn.onmouseup = () => (dlBtn.style.transform = "scale(1)");
 
   panel.appendChild(header);
   panel.appendChild(status);
@@ -89,9 +167,9 @@
   // ---- XHR インターセプト ----
   const origOpen = XMLHttpRequest.prototype.open;
   XMLHttpRequest.prototype.open = function (method, url) {
-    if (typeof url === 'string' && url.includes('/timedtext?')) {
-      const params = new URLSearchParams(url.split('?')[1]);
-      if (params.get('v') === videoId && !params.get('tlang')) {
+    if (typeof url === "string" && url.includes("/timedtext?")) {
+      const params = new URLSearchParams(url.split("?")[1]);
+      if (params.get("v") === videoId && !params.get("tlang")) {
         fetchPair(url);
       }
     }
@@ -103,35 +181,41 @@
   function parseEvents(text) {
     const events = JSON.parse(text).events || [];
     return events
-      .filter(e => e.segs)
-      .map(e => ({
+      .filter((e) => e.segs)
+      .map((e) => ({
         startMs: e.tStartMs,
         durationMs: e.dDurationMs,
-        text: e.segs.map(s => s.utf8).join('').trim(),
+        text: e.segs
+          .map((s) => s.utf8)
+          .join("")
+          .trim(),
       }))
-      .filter(e => e.text);
+      .filter((e) => e.text);
   }
 
   async function fetchPair(capturedUrl) {
     if (fetching) return;
     fetching = true;
 
-    const lang = 'ja';
-    setStatus('Fetching subtitles...');
+    const lang = "ja";
+    setStatus("Fetching subtitles...");
 
     try {
       const [origText, transText] = await Promise.all([
-        fetch(capturedUrl).then(r => r.text()),
-        fetch(capturedUrl + '&tlang=' + lang).then(r => r.text()),
+        fetch(capturedUrl).then((r) => r.text()),
+        fetch(capturedUrl + "&tlang=" + lang).then((r) => r.text()),
       ]);
 
       if (origText.length < 20) {
-        setStatus('No source subtitles found.', COLOR_ERROR);
+        setStatus("No source subtitles found.", COLOR_ERROR);
         fetching = false;
         return;
       }
       if (transText.length < 20) {
-        setStatus('No translation found (manually-captioned video?).', COLOR_ERROR);
+        setStatus(
+          "No translation found (manually-captioned video?).",
+          COLOR_ERROR,
+        );
         fetching = false;
         return;
       }
@@ -140,30 +224,33 @@
       const trans = parseEvents(transText);
 
       if (origs.length === 0) {
-        setStatus('Failed to parse subtitles.', COLOR_ERROR);
+        setStatus("Failed to parse subtitles.", COLOR_ERROR);
         fetching = false;
         return;
       }
 
-      const transMap = new Map(trans.map(t => [t.startMs, t.text]));
-      const subtitles = origs.map(o => ({
+      const transMap = new Map(trans.map((t) => [t.startMs, t.text]));
+      const subtitles = origs.map((o) => ({
         startMs: o.startMs,
         durationMs: o.durationMs,
         subtitle: o.text,
-        translation: transMap.get(o.startMs) || '',
+        translation: transMap.get(o.startMs) || "",
       }));
 
       result = {
         id: videoId,
         title: videoTitle,
         subtitles,
+        duration: getVideoDuration(),
+        channel: getChannelName(),
+        publishDate: getPublishDate(),
       };
 
-      setStatus('Fetched ' + subtitles.length + ' lines.', COLOR_SUCCESS);
-      saveBtn.style.visibility = 'visible';
-      dlBtn.style.visibility = 'visible';
+      setStatus("Fetched " + subtitles.length + " lines.", COLOR_SUCCESS);
+      saveBtn.style.visibility = "visible";
+      dlBtn.style.visibility = "visible";
     } catch (e) {
-      setStatus('Error: ' + e.message + '.', COLOR_ERROR);
+      setStatus("Error: " + e.message + ".", COLOR_ERROR);
       fetching = false;
     }
   }
@@ -173,13 +260,13 @@
   saveBtn.onclick = function () {
     if (!result) return;
 
-    const popup = window.open(ALBIREO_URL, '_blank');
+    const popup = window.open(ALBIREO_URL, "_blank");
     if (!popup) {
-      setStatus('Please allow popups.', COLOR_ERROR);
+      setStatus("Please allow popups.", COLOR_ERROR);
       return;
     }
 
-    setStatus('Waiting for Albireo...');
+    setStatus("Waiting for Albireo...");
     saveBtn.disabled = true;
 
     let acked = false;
@@ -188,61 +275,65 @@
       if (event.source !== popup) return;
       if (event.origin !== ALBIREO_ORIGIN) return;
       const data = event.data;
-      if (!data || data.source !== 'albireo') return;
+      if (!data || data.source !== "albireo") return;
 
-      if (data.type === 'kotodama:ready') {
-        popup.postMessage({
-          source: 'kotodama',
-          type: 'kotodama:data',
-          payload: result,
-        }, ALBIREO_ORIGIN);
-        setStatus('Sending data...');
-      } else if (data.type === 'kotodama:ack') {
+      if (data.type === "kotodama:ready") {
+        popup.postMessage(
+          {
+            source: "kotodama",
+            type: "kotodama:data",
+            payload: result,
+          },
+          ALBIREO_ORIGIN,
+        );
+        setStatus("Sending data...");
+      } else if (data.type === "kotodama:ack") {
         acked = true;
-        setStatus('Saved to Albireo.', COLOR_SUCCESS);
+        setStatus("Saved to Albireo.", COLOR_SUCCESS);
         saveBtn.disabled = false;
-        window.removeEventListener('message', handleMessage);
+        window.removeEventListener("message", handleMessage);
         clearTimeout(timeoutId);
       }
     }
 
-    window.addEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
 
     const timeoutId = setTimeout(() => {
       if (acked) return;
-      window.removeEventListener('message', handleMessage);
-      setStatus('No response from Albireo.', COLOR_ERROR);
+      window.removeEventListener("message", handleMessage);
+      setStatus("No response from Albireo.", COLOR_ERROR);
       saveBtn.disabled = false;
     }, HANDOFF_TIMEOUT_MS);
   };
 
   // ---- JSONダウンロード (フォールバック) ----
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isIOS =
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 
   dlBtn.onclick = async function () {
     if (!result) return;
     const json = JSON.stringify(result, null, 2);
-    const filename = videoId + '_albireo.json';
+    const filename = videoId + "_albireo.json";
 
-    if (isIOS && typeof navigator.canShare === 'function') {
+    if (isIOS && typeof navigator.canShare === "function") {
       try {
-        const file = new File([json], filename, { type: 'application/json' });
+        const file = new File([json], filename, { type: "application/json" });
         if (navigator.canShare({ files: [file] })) {
           await navigator.share({ files: [file], title: filename });
-          setStatus('Shared.', COLOR_SUCCESS);
+          setStatus("Shared.", COLOR_SUCCESS);
           return;
         }
       } catch (e) {
-        if (e.name === 'AbortError') return;
-        setStatus('Share failed: ' + e.message + '.', COLOR_ERROR);
+        if (e.name === "AbortError") return;
+        setStatus("Share failed: " + e.message + ".", COLOR_ERROR);
         return;
       }
     }
 
-    const blob = new Blob([json], { type: 'application/json' });
+    const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     document.body.appendChild(a);
