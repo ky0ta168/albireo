@@ -14,6 +14,9 @@ export default function Player({ open, onClose, video }: PlayerProps) {
   const [displaySubtitles, setDisplaySubtitles] = useState(false);
   const [subtitle, setSubtitle] = useState("");
   const [translation, setTranslation] = useState("");
+  // react-player は再レンダリングのたびに playbackRate を prop 値(未指定だと既定の1)へ強制する。
+  // ユーザーが選んだ速度を state で保持して prop に渡し直すことで、一時停止などの再レンダリングで1.0倍に戻るのを防ぐ。
+  const [playbackRate, setPlaybackRate] = useState(1);
 
   const formatTime = (seconds: number): string => {
     const hour = Math.floor(seconds / 3600);
@@ -35,6 +38,10 @@ export default function Player({ open, onClose, video }: PlayerProps) {
 
   const handleOnPause = () => {
     setDisplaySubtitles(false);
+  };
+
+  const handleRateChange = (event: SyntheticEvent<HTMLVideoElement>) => {
+    setPlaybackRate(event.currentTarget.playbackRate);
   };
 
   const handleTimeUpdate = (event: SyntheticEvent<HTMLVideoElement>) => {
@@ -121,8 +128,10 @@ export default function Player({ open, onClose, video }: PlayerProps) {
             width={"100%"}
             height={"100dvh"}
             controls={true}
+            playbackRate={playbackRate}
             onPlay={handleOnPlay}
             onPause={handleOnPause}
+            onRateChange={handleRateChange}
             onTimeUpdate={handleTimeUpdate}
           />
           {displaySubtitles && (subtitle || translation) && (
